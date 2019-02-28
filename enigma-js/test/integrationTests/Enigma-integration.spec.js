@@ -15,6 +15,10 @@ import EthCrypto from 'eth-crypto';
 
 forge.options.usePureJavaScript = true;
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 describe('Enigma tests', () => {
   let accounts;
   let web3;
@@ -66,73 +70,66 @@ describe('Enigma tests', () => {
   });
 
   let workerAddress;
-  it('should check that one worker, and only one worker, is registered', async () => {
+  it('should check that one worker and the principal node, and only them, are registered', async () => {
     let workerStatuses = [];
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 10; i++) {
       workerStatuses.push(await enigma.admin.getWorkerStatus(accounts[i]));
     }
-    expect(workerStatuses).toEqual([2, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(workerStatuses).toEqual([2, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
     workerAddress = await enigma.admin.getWorkerSignerAddr(accounts[0]);
     workerAddress = workerAddress.toLowerCase().slice(-40);
     console.log('WorkerAddress is '+workerAddress);
   });
 
-  it('should register Principal node', async () => {
-    let worker = data.principal;
-    const report = '0x' + Array.from(worker[1]).map((c) => c.charCodeAt(0).toString(16)).join('');
-    const signature = '0x' + worker[3];
-    let result = await new Promise((resolve, reject) => {
-      enigma.enigmaContract.methods.register(worker[0], report, signature)
-        .send({
-          gas: 4712388,
-          gasPrice: 100000000000,
-          from: accounts[9],
-        })
-        .on('receipt', (receipt) => resolve(receipt))
-        .on('error', (error) => reject(error));
-    });
-    expect(result).toBeTruthy;
-  });
+  // it('should register Principal node', async () => {
+  //   let worker = data.principal;
+  //   const report = '0x' + Array.from(worker[1]).map((c) => c.charCodeAt(0).toString(16)).join('');
+  //   const signature = '0x' + worker[3];
+  //   let result = await new Promise((resolve, reject) => {
+  //     enigma.enigmaContract.methods.register(worker[0], report, signature)
+  //       .send({
+  //         gas: 4712388,
+  //         gasPrice: 100000000000,
+  //         from: accounts[9],
+  //       })
+  //       .on('receipt', (receipt) => resolve(receipt))
+  //       .on('error', (error) => reject(error));
+  //   });
+  //   expect(result).toBeTruthy;
+  // });
 
-  it('MOCK should set the worker parameters (principal only) - initialization', async () => {
-    let blockNumber = await web3.eth.getBlockNumber();
-    let getActiveWorkersResult = await enigma.enigmaContract.methods.getActiveWorkers(blockNumber).call({
-      from: accounts[9],
-    });
-    let workerAddresses = getActiveWorkersResult['0'];
-    let workerBalances = getActiveWorkersResult['1'];
-    const nonce = parseInt(await enigma.enigmaContract.methods.getUserTaskDeployments(accounts[9]).call());
-    const seed = Math.floor(Math.random() * 100000);
-    const hash = web3.utils.soliditySha3(
-      {t: 'uint', v: seed},
-      {t: 'uint', v: nonce},
-      {t: 'address[]', v: workerAddresses},
-      {t: 'uint[]', v: workerBalances},
-    );
-    const sig = utils.sign(data.principal[4], hash);
+  // it('MOCK should set the worker parameters (principal only) - initialization', async () => {
+  //   let blockNumber = await web3.eth.getBlockNumber();
+  //   let getActiveWorkersResult = await enigma.enigmaContract.methods.getActiveWorkers(blockNumber).call({
+  //     from: accounts[9],
+  //   });
+  //   let workerAddresses = getActiveWorkersResult['0'];
+  //   let workerBalances = getActiveWorkersResult['1'];
+  //   const nonce = parseInt(await enigma.enigmaContract.methods.getUserTaskDeployments(accounts[9]).call());
+  //   const seed = Math.floor(Math.random() * 100000);
+  //   const hash = web3.utils.soliditySha3(
+  //     {t: 'uint', v: seed},
+  //     {t: 'uint', v: nonce},
+  //     {t: 'address[]', v: workerAddresses},
+  //     {t: 'uint[]', v: workerBalances},
+  //   );
+  //   const sig = utils.sign(data.principal[4], hash);
 
-    const receipt = await new Promise((resolve, reject) => {
-      enigma.enigmaContract.methods.setWorkersParams(blockNumber, seed, sig)
-        .send({
-          gas: 4712388,
-          gasPrice: 100000000000,
-          from: accounts[9],
-        })
-        .on('receipt', (receipt) => resolve(receipt))
-        .on('error', (error) => {
-          console.log('errored');
-          reject(error);
-        });
-    });
-    expect(receipt).toBeTruthy;
-  });
-
-  it('should move forward epochSize blocks by calling dummy contract', async () => {
-    const epochSize = await enigma.enigmaContract.methods.getEpochSize().call();
-    for (let i = 0; i < epochSize; i++) {
-      await sampleContract.methods.incrementCounter().send({from: accounts[8]});
-    }
-  });
+  //   const receipt = await new Promise((resolve, reject) => {
+  //     enigma.enigmaContract.methods.setWorkersParams(blockNumber, seed, sig)
+  //       .send({
+  //         gas: 4712388,
+  //         gasPrice: 100000000000,
+  //         from: accounts[9],
+  //       })
+  //       .on('receipt', (receipt) => resolve(receipt))
+  //       .on('error', (error) => {
+  //         console.log('errored');
+  //         reject(error);
+  //       });
+  //   });
+  //   expect(receipt).toBeTruthy;
+  // });
 
   it('should check worker\'s stake balance is empty', async () => {
     let balance = await enigma.admin.getBalance(accounts[0]);
@@ -156,11 +153,6 @@ describe('Enigma tests', () => {
     expect(balance).toEqual(900 * 10 ** 8);
   });
 
-  it('should check workers\' stake balance is empty', async () => {
-    let stake = await enigma.admin.getStake(accounts[0]);
-    expect(stake).toEqual(0);
-  });
-
   it('should login the worker', async () => {
     let result = await new Promise((resolve, reject) => {
       enigma.admin.login(accounts[0])
@@ -173,50 +165,50 @@ describe('Enigma tests', () => {
 
   it('should check that one worker, and only one worker, is logged in', async () => {
     let workerStatuses = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 10; i++) {
       workerStatuses.push(await enigma.admin.getWorkerStatus(accounts[i]));
     }
-    expect(workerStatuses).toEqual([1, 0, 0, 0, 0, 0, 0, 0]);
+    expect(workerStatuses).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
   });
 
-  it('MOCK should set the worker parameters (principal only)', async () => {
-    let blockNumber = await web3.eth.getBlockNumber();
-    let getActiveWorkersResult = await enigma.enigmaContract.methods.getActiveWorkers(blockNumber).call({
-      from: accounts[9],
-    });
-    let workerAddresses = getActiveWorkersResult['0'];
-    let workerBalances = getActiveWorkersResult['1'];
-    const nonce = parseInt(await enigma.enigmaContract.methods.getUserTaskDeployments(accounts[9]).call());
-    const seed = Math.floor(Math.random() * 100000);
-    const hash = web3.utils.soliditySha3(
-      {t: 'uint', v: seed},
-      {t: 'uint', v: nonce},
-      {t: 'address[]', v: workerAddresses},
-      {t: 'uint[]', v: workerBalances},
-    );
-    const sig = utils.sign(data.principal[4], hash);
+  // it('MOCK should set the worker parameters (principal only)', async () => {
+  //   let blockNumber = await web3.eth.getBlockNumber();
+  //   let getActiveWorkersResult = await enigma.enigmaContract.methods.getActiveWorkers(blockNumber).call({
+  //     from: accounts[9],
+  //   });
+  //   let workerAddresses = getActiveWorkersResult['0'];
+  //   let workerBalances = getActiveWorkersResult['1'];
+  //   const nonce = parseInt(await enigma.enigmaContract.methods.getUserTaskDeployments(accounts[9]).call());
+  //   const seed = Math.floor(Math.random() * 100000);
+  //   const hash = web3.utils.soliditySha3(
+  //     {t: 'uint', v: seed},
+  //     {t: 'uint', v: nonce},
+  //     {t: 'address[]', v: workerAddresses},
+  //     {t: 'uint[]', v: workerBalances},
+  //   );
+  //   const sig = utils.sign(data.principal[4], hash);
 
-    const receipt = await new Promise((resolve, reject) => {
-      enigma.enigmaContract.methods.setWorkersParams(blockNumber, seed, sig)
-        .send({
-          gas: 4712388,
-          gasPrice: 100000000000,
-          from: accounts[9],
-        })
-        .on('receipt', (receipt) => resolve(receipt))
-        .on('error', (error) => {
-          console.log('errored');
-          reject(error);
-        });
-    });
-    expect(receipt).toBeTruthy;
-  });
+  //   const receipt = await new Promise((resolve, reject) => {
+  //     enigma.enigmaContract.methods.setWorkersParams(blockNumber, seed, sig)
+  //       .send({
+  //         gas: 4712388,
+  //         gasPrice: 100000000000,
+  //         from: accounts[9],
+  //       })
+  //       .on('receipt', (receipt) => resolve(receipt))
+  //       .on('error', (error) => {
+  //         console.log('errored');
+  //         reject(error);
+  //       });
+  //   });
+  //   expect(receipt).toBeTruthy;
+  // });
 
   it('should get the worker parameters for the current block', async () => {
     const blockNumber = await web3.eth.getBlockNumber();
     const workerParams = await enigma.getWorkerParams(blockNumber);
-    expect(workerParams.workers).toEqual([accounts[0]]);
-    expect(workerParams.stakes).toEqual([0]);
+    expect(workerParams.workers).toEqual([]);
+    expect(workerParams.stakes).toEqual([]);
   });
 
   it('should move forward epochSize blocks by calling dummy contract', async () => {
@@ -224,38 +216,40 @@ describe('Enigma tests', () => {
     for (let i = 0; i < epochSize; i++) {
       await sampleContract.methods.incrementCounter().send({from: accounts[8]});
     }
-  });
+    // Wait for 2s for the Ppal node to pick up the new epoch
+    await sleep(2000);
+  }, 8000);
 
-  it('MOCK should set the worker parameters (principal only) a second time to pick up on new stakes', async () => {
-    const blockNumber = await web3.eth.getBlockNumber();
-    let getActiveWorkersResult = await enigma.enigmaContract.methods.getActiveWorkers(blockNumber).call();
-    let workerAddresses = getActiveWorkersResult['0'];
-    let workerBalances = getActiveWorkersResult['1'];
-    const nonce = parseInt(await enigma.enigmaContract.methods.getUserTaskDeployments(accounts[9]).call());
-    const seed = Math.floor(Math.random() * 100000);
-    const hash = web3.utils.soliditySha3(
-      {t: 'uint', v: seed},
-      {t: 'uint', v: nonce},
-      {t: 'address[]', v: workerAddresses},
-      {t: 'uint[]', v: workerBalances},
-    );
-    const sig = utils.sign(data.principal[4], hash);
+  // it('MOCK should set the worker parameters (principal only) a second time to pick up on new stakes', async () => {
+  //   const blockNumber = await web3.eth.getBlockNumber();
+  //   let getActiveWorkersResult = await enigma.enigmaContract.methods.getActiveWorkers(blockNumber).call();
+  //   let workerAddresses = getActiveWorkersResult['0'];
+  //   let workerBalances = getActiveWorkersResult['1'];
+  //   const nonce = parseInt(await enigma.enigmaContract.methods.getUserTaskDeployments(accounts[9]).call());
+  //   const seed = Math.floor(Math.random() * 100000);
+  //   const hash = web3.utils.soliditySha3(
+  //     {t: 'uint', v: seed},
+  //     {t: 'uint', v: nonce},
+  //     {t: 'address[]', v: workerAddresses},
+  //     {t: 'uint[]', v: workerBalances},
+  //   );
+  //   const sig = utils.sign(data.principal[4], hash);
 
-    const receipt = await new Promise((resolve, reject) => {
-      enigma.enigmaContract.methods.setWorkersParams(blockNumber, seed, sig)
-        .send({
-          gas: 4712388,
-          gasPrice: 100000000000,
-          from: accounts[9],
-        })
-        .on('receipt', (receipt) => resolve(receipt))
-        .on('error', (error) => {
-          console.log('errored');
-          reject(error);
-        });
-    });
-    expect(receipt).toBeTruthy;
-  });
+  //   const receipt = await new Promise((resolve, reject) => {
+  //     enigma.enigmaContract.methods.setWorkersParams(blockNumber, seed, sig)
+  //       .send({
+  //         gas: 4712388,
+  //         gasPrice: 100000000000,
+  //         from: accounts[9],
+  //       })
+  //       .on('receipt', (receipt) => resolve(receipt))
+  //       .on('error', (error) => {
+  //         console.log('errored');
+  //         reject(error);
+  //       });
+  //   });
+  //   expect(receipt).toBeTruthy;
+  // });
 
   it('should get the worker parameters for the current block', async () => {
     const blockNumber = await web3.eth.getBlockNumber();
@@ -284,6 +278,7 @@ describe('Enigma tests', () => {
   });
 
   let scTask;
+  let task;
   it('should deploy secret contract', async () => {
     let scTaskFn = 'construct()';
     let scTaskArgs = '';
@@ -303,6 +298,66 @@ describe('Enigma tests', () => {
     });
   });
 
+  it('should get the confirmed deploy contract task', async () => {
+    do {
+      scTask = await enigma.getTaskRecordStatus(scTask);
+      console.log(scTask.ethStatus);
+      await sleep(1000);
+    } while (scTask.ethStatus != 2);
+    expect(scTask.ethStatus).toEqual(2);
+  });
+
+  it('should verify deployed contract', async () => {
+    const result = await enigma.admin.isDeployed('0x'+scTask.scAddr);
+    expect(result).toEqual(true);
+  });
+
+  it('should get deployed contract bytecode hash', async () => {
+    const result = await enigma.admin.getCodeHash('0x'+scTask.scAddr);
+    expect(result).toBeTruthy;
+    console.log('Deployed contract bytecode hash is:')
+    console.log(result);
+  });
+
+  it('should execute compute task', async () => {
+    let taskFn = 'addition(uint,uint)';
+    let taskArgs = [
+      [24, 'uint256'],
+      [67, 'uint256'],
+    ];
+    let taskGasLimit = 100000;
+    let taskGasPx = utils.toGrains(1);
+    task = await new Promise((resolve, reject) => {
+      enigma.computeTask(taskFn, taskArgs, taskGasLimit, taskGasPx, accounts[0], scTask.scAddr)
+        .on(eeConstants.SEND_TASK_INPUT_RESULT, (result) => resolve(result))
+        .on(eeConstants.ERROR, (error) => reject(error));
+    });
+    console.log(task);
+  });
+
+  it('should get the pending task', async () => {
+    task = await enigma.getTaskRecordStatus(task);
+    expect(task.ethStatus).toEqual(1);
+  });
+
+  it('should get the confirmed task', async () => {
+    do {
+      task = await enigma.getTaskRecordStatus(task);
+      console.log(task.ethStatus);
+      await sleep(1000);
+    } while (task.ethStatus != 2);
+    expect(task.ethStatus).toEqual(2);
+  });
+
+  it('should get the result', async () => {
+    do {
+      task = await enigma.getTaskRecordStatus(task);
+      console.log(task.ethStatus);
+      await sleep(1000);
+    } while (task.ethStatus != 2);
+    expect(task.ethStatus).toEqual(2);
+  });
+
   it('should clean up', async() => {
     // Log out
     await new Promise((resolve, reject) => {
@@ -317,6 +372,15 @@ describe('Enigma tests', () => {
     let workerStatus = await enigma.admin.getWorkerStatus(accounts[0]);
     expect(workerStatus).toEqual(2);
 
+    // Advance epoch to be able to withdraw
+    const epochSize = await enigma.enigmaContract.methods.getEpochSize().call();
+    for (let i = 0; i < epochSize; i++) {
+      await sampleContract.methods.incrementCounter().send({from: accounts[8]});
+    }
+
+    // Wait for 2s for the Ppal node to pick up the new epoch
+    await sleep(2000);
+
     // Withdraw stake
     const bal = parseInt((await enigma.enigmaContract.methods.getWorker(accounts[0]).call()).balance);
     await expect(new Promise((resolve, reject) => {
@@ -328,13 +392,6 @@ describe('Enigma tests', () => {
     }));
     const endingBalance = parseInt((await enigma.enigmaContract.methods.getWorker(accounts[0]).call()).balance);
     expect(endingBalance).toEqual(0);
-  });
-
-  it('should move forward epochSize blocks by calling dummy contract for any subsequent test runs', async () => {
-    const epochSize = await enigma.enigmaContract.methods.getEpochSize().call();
-    for (let i = 0; i < epochSize; i++) {
-      await sampleContract.methods.incrementCounter().send({from: accounts[8]});
-    }
   });
 
 });
