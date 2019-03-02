@@ -255,7 +255,7 @@ describe('Enigma tests', () => {
     const blockNumber = await web3.eth.getBlockNumber();
     const workerParams = await enigma.getWorkerParams(blockNumber);
     expect(workerParams.workers).toEqual([accounts[0]]);
-    expect(workerParams.stakes).toEqual([90000000000]);
+    expect(workerParams.stakes).toEqual([web3.utils.toBN(900 * 10 ** 8)]);
   });
 
   const userPubKey = '2ea8e4cefb78efd0725ed12b23b05079a0a433cc8a656f212accf58672fee44a20cfcaa50466237273e762e49ec'+
@@ -308,12 +308,12 @@ describe('Enigma tests', () => {
   });
 
   it('should verify deployed contract', async () => {
-    const result = await enigma.admin.isDeployed('0x'+scTask.scAddr);
+    const result = await enigma.admin.isDeployed(scTask.scAddr);
     expect(result).toEqual(true);
   });
 
   it('should get deployed contract bytecode hash', async () => {
-    const result = await enigma.admin.getCodeHash('0x'+scTask.scAddr);
+    const result = await enigma.admin.getCodeHash(scTask.scAddr);
     expect(result).toBeTruthy;
     console.log('Deployed contract bytecode hash is:')
     console.log(result);
