@@ -70,3 +70,4 @@ coverage.lcov
 build
 enigmacontract.txt
 enigmatokencontract.txt
+enigma-js/test/integrationTests/*.spec.js
