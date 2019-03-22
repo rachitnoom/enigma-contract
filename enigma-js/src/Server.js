@@ -2,7 +2,10 @@ import jayson from 'jayson';
 import cors from 'cors';
 import connect from 'connect';
 import bodyParser from 'body-parser';
-// var app = connect();
+import web3Utils from 'web3-utils';
+import data from '../test/data';
+import EthCrypto from 'eth-crypto';
+import utils from './enigma-utils';
 
 export default class RPCServer {
   constructor() {
@@ -17,12 +20,15 @@ export default class RPCServer {
         if (!workerAddress) {
           callback({code: -32602, message: 'Invalid params'});
         } else {
+          const worker = data.workers.find((w) => w[0] === '0x' + workerAddress);
+          const identity = EthCrypto.createIdentity();
+          // see the corresponding implementation in Enigma.js for an explanation of this hardcoded hex string
+          const hexToSign = '0x0000000000000013456e69676d612055736572204d6573736167650000000000000040'+identity.publicKey;
+          const signature = EthCrypto.sign(worker[4], web3Utils.soliditySha3({t: 'bytes', value: hexToSign}));
           callback(null, {
             result: {
-              workerEncryptionKey: 'c647c3b37429e43638712f2fc2ecfa3e0fbd1bc23938cb8e605a0e91bb93c9c184dbb06552ac9e' +
-                'b7fb65f219bef58f14b90557299fc69b20331f60d183e98cc5',
-              workerSig: 'acb4ce556cbd2549975a08f6e2166f80c9c9fcbb8b92a6ebcc62d998b62449733bd294de8c8db9d225c2e911' +
-                '97231adf5b43a96b1750f75f05cbc22686056d091b',
+              workerEncryptionKey: identity.publicKey,
+              workerSig: utils.remove0x(signature),
             }, id: 'ldotj6nghv7a',
           });
         }
