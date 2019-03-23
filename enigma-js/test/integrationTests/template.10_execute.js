@@ -1,5 +1,6 @@
 /* eslint-disable require-jsdoc */
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import forge from 'node-forge';
 import Web3 from 'web3';
@@ -47,8 +48,9 @@ describe('Enigma tests', () => {
     });
   });
 
+  const homedir = os.homedir();
   const additionAddr = fs.readFileSync(path.join(homedir, '.enigma', 'addition-addr.txt'), 'utf-8'); 
-
+  let task;
   it('should execute compute task', async () => {
     let taskFn = 'addition(uint,uint)';
     let taskArgs = [
