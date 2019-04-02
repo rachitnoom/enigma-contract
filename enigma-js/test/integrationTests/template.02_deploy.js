@@ -83,7 +83,7 @@ describe('Enigma tests', () => {
       await sleep(1000);
     } while (scTask.ethStatus != 2);
     expect(scTask.ethStatus).toEqual(2);
-  });
+  }, 10000);
 
   it('should verify deployed contract', async () => {
     const result = await enigma.admin.isDeployed(scTask.scAddr);

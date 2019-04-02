@@ -73,7 +73,6 @@ describe('Init tests', () => {
     }
     expect(workerStatuses).toEqual([2, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
     workerAddress = await enigma.admin.getWorkerSignerAddr(accounts[0]);
-    workerAddress = workerAddress.toLowerCase().slice(-40);
     console.log('WorkerAddress is '+workerAddress);
   });
 
@@ -136,7 +135,7 @@ describe('Init tests', () => {
   it('should get the worker parameters for the current block', async () => {
     const blockNumber = await web3.eth.getBlockNumber();
     const workerParams = await enigma.getWorkerParams(blockNumber);
-    expect(workerParams.workers).toBeTruthy;
+    expect(workerParams.workers).toEqual([workerAddress]);
     expect(workerParams.stakes).toEqual([web3.utils.toBN(900 * 10 ** 8)]);
   });
 
@@ -144,13 +143,12 @@ describe('Init tests', () => {
     '912be61358d5e90bff56a53a0ed42abfe27e3';
   it('should create getTaskEncryptionKey from core (with call to P2P)', async () => {
     const encryptionKeyResult = await new Promise((resolve, reject) => {
-        workerAddress
-        console.log(workerAddress);
-        enigma.client.request('getWorkerEncryptionKey', {workerAddress: workerAddress, userPubKey: userPubKey}, (err, response) => {
-          if (err) {
-            reject(err);
-          }
-          resolve(response);
+        enigma.client.request('getWorkerEncryptionKey', 
+          {workerAddress: workerAddress.toLowerCase().slice(-40), userPubKey: userPubKey}, (err, response) => {
+            if (err) {
+              reject(err);
+            }
+            resolve(response);
         });
       });
     console.log(encryptionKeyResult)
