@@ -133,11 +133,16 @@ describe('Init tests', () => {
   }, 8000);
 
   it('should get the worker parameters for the current block', async () => {
-    const blockNumber = await web3.eth.getBlockNumber();
-    const workerParams = await enigma.getWorkerParams(blockNumber);
+    let blockNumber;
+    let workerParams;
+    do {
+      blockNumber = await web3.eth.getBlockNumber();
+      workerParams = await enigma.getWorkerParams(blockNumber);
+      await sleep(1000);
+    } while (!workerParams)
     expect(workerParams.workers).toEqual([workerAddress]);
     expect(workerParams.stakes).toEqual([web3.utils.toBN(900 * 10 ** 8)]);
-  });
+  }, 5000);
 
   const userPubKey = '2ea8e4cefb78efd0725ed12b23b05079a0a433cc8a656f212accf58672fee44a20cfcaa50466237273e762e49ec'+
     '912be61358d5e90bff56a53a0ed42abfe27e3';
